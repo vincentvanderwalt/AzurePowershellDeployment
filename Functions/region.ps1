@@ -33,7 +33,7 @@ function Select-Region {
         $Script:AzureRegion = $inputRegion
     }
 
-    Write-Host ("You're about to use region {0}" -f $Script:Region) -ForegroundColor Green
+    Write-Host ("You're about to use region {0}" -f $Script:AzureRegion) -ForegroundColor Green
 
     Write-Host
 }

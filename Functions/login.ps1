@@ -1,13 +1,13 @@
 function Login {
     $needLogin = $true
     Try {
-        $content = Get-AzureRmContext
-        if ($content) {
-            $needLogin = ([string]::IsNullOrEmpty($content.Account))
+        $content = (az account show | ConvertFrom-Json)
+        if (![string]::IsNullOrEmpty($content)) {
+            $needLogin = $false
         }
     }
     Catch {
-        if ($_ -like "*Login-AzureRmAccount to login*") {
+        if ($_ -like "*Please run 'az login' to setup account.*") {
             $needLogin = $true
         }
         else {
@@ -18,9 +18,9 @@ function Login {
     if ($needLogin) {
 
         Write-Host "Logging in..." -ForegroundColor Green
-        Login-AzureRmAccount
+        az login
     }
     else {
-        Write-Host ("Already logged in as {0}" -f $content.Account) -ForegroundColor Green
+        Write-Host ("Already logged in as {0}" -f $content.user.name) -ForegroundColor Green
     }
 }

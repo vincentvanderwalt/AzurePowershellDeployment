@@ -19,7 +19,7 @@ function Add-Keyvault {
         } While ([string]::IsNullOrEmpty($keyvaultName))
     }
     else {
-        $keyvaultName = $inputResourcegroup
+        $keyvaultName = $inputKeyvaultName
     }
 
     if (![string]::IsNullOrEmpty($Script:ResourcePrefix)) {
