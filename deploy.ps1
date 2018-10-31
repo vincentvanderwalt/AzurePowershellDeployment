@@ -16,13 +16,13 @@ Login
 
 Select-Subscription
 
-# Select-Environment "Dev"
+Select-Environment "Dev"
 
-# Select-Region "ukwest"
+Select-Region "ukwest"
 
-# Add-Resourcegroup "vinny-test"
+Add-Resourcegroup "vinny-test"
 
-# Add-Keyvault "vinny-kv"
+Add-Keyvault "vinny-kv1"
 
 # $storageName = Add-StorageAccount "vinny-sg" "Standard_LRS" "StorageV2"
 

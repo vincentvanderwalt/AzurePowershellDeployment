@@ -24,11 +24,15 @@ function Add-Resourcegroup {
         $resourcegroupName = ("{0}-{1}" -f $Script:ResourcePrefix,$resourcegroupName) 
     }
 
-    Get-AzureRmResourceGroup -Name $resourcegroupName -ErrorVariable resourcegroupNotPresent -ErrorAction SilentlyContinue | Out-Null
+    $resourcegroupExists = az group exists --name $resourcegroupName
 
-    if ($resourcegroupNotPresent) {
+    # Get-AzureRmResourceGroup -Name $resourcegroupName -ErrorVariable resourcegroupNotPresent -ErrorAction SilentlyContinue | Out-Null
+
+    if (!$resourcegroupExists) {
         Write-Host -ForegroundColor Green ("Creating Resource group {0}" -f $resourcegroupName)
-        New-AzureRmResourceGroup -Name $resourcegroupName -Location $Script:AzureRegion
+        az group create --name $resourcegroupName --location $Script:AzureRegion
+
+        # New-AzureRmResourceGroup -Name $resourcegroupName -Location $Script:AzureRegion
     }
     else {
         Write-Host -ForegroundColor Green ("Resource group {0} already exists" -f $resourcegroupName)

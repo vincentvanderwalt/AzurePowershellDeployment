@@ -28,13 +28,12 @@ function Add-Keyvault {
 
     $Script:KeyvaultName = $keyvaultName
 
-    $keyvaultDetail = Get-AzureRmKeyVault -VaultName $Script:KeyvaultName
+    $keyvaultDetail = (az keyvault list --resource-group dev-vinny-test | ConvertFrom-Json) | where {$_.name -eq $keyvaultName}
 
-    if (([string]::IsNullOrEmpty($keyvaultDetail))) {
+    if ([string]::IsNullOrEmpty($keyvaultDetail)) {
         Write-Host -ForegroundColor Green ("Creating Keyvault {0}" -f $keyvaultName)
-        New-AzureRmKeyVault -Name $Script:KeyvaultName -Location $Script:AzureRegion -ResourceGroupName $Script:Resourcegroup -EnabledForDeployment -EnabledForDiskEncryption
-    }
-    else {
+        az keyvault create --name $keyvaultName --resource-group $Script:Resourcegroup --location $Script:AzureRegion
+    } else {
         Write-Host -ForegroundColor Green ("Keyvault {0} already exists" -f $Script:KeyvaultName)
     }
 }
