@@ -1,3 +1,4 @@
+
 function Add-StorageAccount {
     Param(
         [String]$inputName,
@@ -87,15 +88,16 @@ function Add-StorageAccount {
         $Kind = $inputKind
     }
 
-    $accountDetail = Get-AzureRmStorageAccount -ResourceGroupName $Script:Resourcegroup -AccountName $Name
+    $accountDetail = (az storage account list --resource-group $Script:Resourcegroup | ConvertFrom-Json) | where {$_.name -eq $Name}
 
-    if (([string]::IsNullOrEmpty($accountDetail.StorageAccountName))) {
+    if (([string]::IsNullOrEmpty($accountDetail.name))) {
         Write-Host -ForegroundColor Green ("Creating Storage Account {0}" -f $Name)
-        $storageAccount = New-AzureRmStorageAccount -ResourceGroupName $Script:Resourcegroup `
-        -Name $Name `
-        -Location $Script:AzureRegion `
-        -SkuName $Sku `
-        -Kind $Kind
+
+        az storage account create --resource-group $Script:Resourcegroup `
+        --name $Name `
+        --location  $Script:AzureRegion `
+        --sku $Sku `
+        --kind $Kind
     }
     else {
         Write-Host -ForegroundColor Green ("Storage Account {0} already exists" -f $Name)
@@ -104,6 +106,47 @@ function Add-StorageAccount {
     return $Name
 }
 
+function Get-StorageKey {
+    Param(
+        [String]$inputStorageAccount
+    )
+
+    if ([string]::IsNullOrEmpty($inputStorageAccount)) {
+        Do {
+            $storageAccount = Read-Host "Please provide a Storage Account name"
+        } While ([string]::IsNullOrEmpty($storageAccount))
+    }
+    else {
+        $storageAccount = $inputStorageAccount
+    }
+
+    $Key1 = (az storage account keys list --account-name $storageAccount --resource-group $Script:Resourcegroup| ConvertFrom-Json) | where {$_.keyName -eq "key1"}
+
+    return $Key1.value
+
+}
+
+function Get-StorageConnectionString {
+    Param(
+        [String]$inputStorageAccount
+    )
+
+    if ([string]::IsNullOrEmpty($inputStorageAccount)) {
+        Do {
+            $storageAccount = Read-Host "Please provide a Storage Account name"
+        } While ([string]::IsNullOrEmpty($storageAccount))
+    }
+    else {
+        $storageAccount = $inputStorageAccount
+    }
+
+    $result = (az storage account show-connection-string `
+    --name $storageAccount `
+    --key primary `
+    | ConvertFrom-Json)
+
+    return $result.connectionString
+}
 function Add-StorageContainer {
     Param(
         [String]$inputStorageAccount,
@@ -136,18 +179,21 @@ function Add-StorageContainer {
         $containerName = $inputName
     }
 
-    $containerDetail = Get-AzureRmStorageContainer -ResourceGroupName $Script:Resourcegroup -AccountName $storageAccount -ContainerName $containerName
+    $key = Get-StorageKey $storageAccount
     
-    if (([string]::IsNullOrEmpty($containerDetail.Name))) {
+    $containerExists = (az storage container exists --name $containerName `
+    --account-name $storageAccount `
+    --account-key $key `
+    | ConvertFrom-Json)
+        
+    if (!$containerExists.exists) {
         Write-Host -ForegroundColor Green ("Creating Storage Container {0}" -f $containerName)
-        New-AzureRmStorageContainer -ResourceGroupName $Script:Resourcegroup `
-        -AccountName $storageAccount `
-        -ContainerName $containerName
+
+        az storage container create --name $containerName `
+        --account-name $storageAccount `
+        --account-key $key
     }
     else {
         Write-Host -ForegroundColor Green ("Storage Container {0} already exists" -f $containerName)
     }
-
-    
-
 }

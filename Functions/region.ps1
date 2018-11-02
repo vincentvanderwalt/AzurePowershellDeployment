@@ -1,3 +1,4 @@
+$Script:AzureRegion = $null
 function Select-Region {
     Param(
         [String]$inputRegion

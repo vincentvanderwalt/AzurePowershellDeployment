@@ -1,3 +1,4 @@
+$Script:Resourcegroup = $null
 function Add-Resourcegroup {
     Param(
         [String]$inputResourcegroup
@@ -24,15 +25,15 @@ function Add-Resourcegroup {
         $resourcegroupName = ("{0}-{1}" -f $Script:ResourcePrefix,$resourcegroupName) 
     }
 
+    $resourcegroupName = $resourcegroupName.ToLowerInvariant()
+
     $resourcegroupExists = az group exists --name $resourcegroupName
 
-    # Get-AzureRmResourceGroup -Name $resourcegroupName -ErrorVariable resourcegroupNotPresent -ErrorAction SilentlyContinue | Out-Null
+    $resourcegroupExists = [System.Convert]::ToBoolean($resourcegroupExists)
 
     if (!$resourcegroupExists) {
         Write-Host -ForegroundColor Green ("Creating Resource group {0}" -f $resourcegroupName)
         az group create --name $resourcegroupName --location $Script:AzureRegion
-
-        # New-AzureRmResourceGroup -Name $resourcegroupName -Location $Script:AzureRegion
     }
     else {
         Write-Host -ForegroundColor Green ("Resource group {0} already exists" -f $resourcegroupName)
