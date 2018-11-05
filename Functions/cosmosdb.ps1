@@ -20,10 +20,6 @@ function Add-Cosmos-Account {
         $Name = $inputName
     }
 
-    if (![string]::IsNullOrEmpty($Script:ResourcePrefix)) {
-        $Name = ("{0}-{1}" -f $Script:ResourcePrefix, $Name) 
-    }
-
     $exist = az cosmosdb check-name-exists --name $Name
 
     if (![System.Convert]::ToBoolean($exist)) {
@@ -37,7 +33,6 @@ function Add-Cosmos-Account {
     else {
         Write-Host -ForegroundColor Green ("CosmosDb Account {0} already exists" -f $Name)
     }
-    return $Name
 }
 
 function Add-Cosmos-Database {

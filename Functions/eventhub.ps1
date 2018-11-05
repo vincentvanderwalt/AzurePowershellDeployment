@@ -37,7 +37,7 @@ function Add-EventHub-Namespace {
             --sku "Standard"
     }
     else {
-        Write-Host -ForegroundColor Green ("Eventhub namespace {0} already exists" -f $Script:eventhubNamespace)
+        Write-Host -ForegroundColor Green ("Eventhub namespace {0} already exists" -f $eventhubNamespace)
     }
 
 }

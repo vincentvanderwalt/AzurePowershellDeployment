@@ -47,8 +47,5 @@ function Select-Subscription {
     }
 
     az account set --subscription $subscriptionId
-
-    $Script:SubscriptionId = $subscriptionId
-
     Write-Host
 }

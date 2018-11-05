@@ -1,4 +1,3 @@
-$Script:AzureRegion = $null
 function Select-Region {
     Param(
         [String]$inputRegion
@@ -29,12 +28,14 @@ function Select-Region {
 
         } While ((-not $idx) -or (0 -gt $idx) -or ($regions.Count -lt $idx))
 
-        $Script:AzureRegion = $regions[$idx - 1].Name
+        $AzureRegion = $regions[$idx - 1].Name
     } else {
-        $Script:AzureRegion = $inputRegion
+        $AzureRegion = $inputRegion
     }
 
-    Write-Host ("You're about to use region {0}" -f $Script:AzureRegion) -ForegroundColor Green
-
+    Write-Host ("You're about to use region {0}" -f $AzureRegion) -ForegroundColor Green
+   
     Write-Host
+
+    return $AzureRegion
 }

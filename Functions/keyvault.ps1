@@ -1,5 +1,3 @@
-$Script:KeyvaultName = $null
-
 function Add-Keyvault {
     Param(
         [String]$inputKeyvaultName
@@ -22,12 +20,6 @@ function Add-Keyvault {
         $keyvaultName = $inputKeyvaultName
     }
 
-    if (![string]::IsNullOrEmpty($Script:ResourcePrefix)) {
-        $keyvaultName = ("{0}-{1}" -f $Script:ResourcePrefix, $keyvaultName) 
-    }
-
-    $Script:KeyvaultName = $keyvaultName
-
     $keyvaultDetail = (az keyvault list --resource-group $Script:Resourcegroup | ConvertFrom-Json) | where {$_.name -eq $keyvaultName}
 
     if ([string]::IsNullOrEmpty($keyvaultDetail)) {
@@ -35,8 +27,10 @@ function Add-Keyvault {
         az keyvault create --name $keyvaultName --resource-group $Script:Resourcegroup --location $Script:AzureRegion
     }
     else {
-        Write-Host -ForegroundColor Green ("Keyvault {0} already exists" -f $Script:KeyvaultName)
+        Write-Host -ForegroundColor Green ("Keyvault {0} already exists" -f $keyvaultName)
     }
+
+    return $keyvaultName
 }
 
 function Add-Keyvault-Secret {
@@ -93,7 +87,8 @@ function Add-Keyvault-Secret {
         az keyvault secret set --vault-name $Script:KeyvaultName `
             --name $secretName `
             --value $secretValue
-    } else {
+    }
+    else {
         Write-Host -ForegroundColor Green ("Keyvault Secret {0} already exists" -f $secretName)
     }
 }

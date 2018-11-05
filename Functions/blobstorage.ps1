@@ -24,10 +24,6 @@ function Add-StorageAccount {
         $Name = $inputName
     }
 
-    if (![string]::IsNullOrEmpty($Script:ResourcePrefix)) {
-        $Name = ("{0}{1}" -f $Script:ResourcePrefix, $Name) 
-    }
-
     $Name = $Name -replace '[^a-zA-Z0-9]', ''
     $Name = $Name.ToLowerInvariant()
     if ($Name.Length -gt 24) {

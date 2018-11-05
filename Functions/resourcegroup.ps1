@@ -1,4 +1,3 @@
-$Script:Resourcegroup = $null
 function Add-Resourcegroup {
     Param(
         [String]$inputResourcegroup
@@ -21,10 +20,6 @@ function Add-Resourcegroup {
         $resourcegroupName = $inputResourcegroup
     }
 
-    if (![string]::IsNullOrEmpty($Script:ResourcePrefix)) {
-        $resourcegroupName = ("{0}-{1}" -f $Script:ResourcePrefix,$resourcegroupName) 
-    }
-
     $resourcegroupName = $resourcegroupName.ToLowerInvariant()
 
     $resourcegroupExists = az group exists --name $resourcegroupName
@@ -39,5 +34,5 @@ function Add-Resourcegroup {
         Write-Host -ForegroundColor Green ("Resource group {0} already exists" -f $resourcegroupName)
     }
 
-    $Script:Resourcegroup = $resourcegroupName
+    return $resourcegroupName
 }
