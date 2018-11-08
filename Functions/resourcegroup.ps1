@@ -1,6 +1,7 @@
 function Add-Resourcegroup {
     Param(
-        [String]$inputResourcegroup
+        [Parameter(Mandatory = $true, HelpMessage = "Please provide a Resourcegroup Name.")]
+        [String]$ResourcegroupName
     )
 
     Write-Host
@@ -11,28 +12,22 @@ function Add-Resourcegroup {
     Write-Host -ForegroundColor DarkMagenta "################################################################"
     Write-Host
     
-    if ([string]::IsNullOrEmpty($inputResourcegroup)) {
-        Do {
-            $resourcegroupName = Read-Host "Please provide a resourcegroup name"
-        } While ([string]::IsNullOrEmpty($resourcegroupName))
-    }
-    else {
-        $resourcegroupName = $inputResourcegroup
-    }
+    $ResourcegroupName = $ResourcegroupName.ToLowerInvariant()
 
-    $resourcegroupName = $resourcegroupName.ToLowerInvariant()
-
-    $resourcegroupExists = az group exists --name $resourcegroupName
+    $resourcegroupExists = az group exists --name $ResourcegroupName
 
     $resourcegroupExists = [System.Convert]::ToBoolean($resourcegroupExists)
 
     if (!$resourcegroupExists) {
-        Write-Host -ForegroundColor Green ("Creating Resource group {0}" -f $resourcegroupName)
-        az group create --name $resourcegroupName --location $Script:AzureRegion
+        Write-Host -ForegroundColor Green ("Creating Resource group {0}" -f $ResourcegroupName)
+
+        $Params = "--name", $ResourcegroupName, "--location", $global:AzureRegion
+
+        (az group create $Params | ConvertFrom-Json) | Out-Null
     }
     else {
-        Write-Host -ForegroundColor Green ("Resource group {0} already exists" -f $resourcegroupName)
+        Write-Host -ForegroundColor Green ("Resource group {0} already exists" -f $ResourcegroupName)
     }
 
-    return $resourcegroupName
+    return $ResourcegroupName
 }

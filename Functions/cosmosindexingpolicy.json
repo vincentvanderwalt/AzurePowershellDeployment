@@ -1,0 +1,13 @@
+{
+  "indexingMode": "lazy",
+  "automatic": true,
+  "includedPaths": [
+    {
+      "path": "/*",
+      "indexes": [
+        { "kind": "Range", "dataType": "String", "precision": -1 },
+        { "kind": "Range", "dataType": "Number", "precision": -1 }
+      ]
+    }
+  ]
+}

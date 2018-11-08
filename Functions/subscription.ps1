@@ -1,25 +1,23 @@
-$Script:SubscriptionId = $null
 function Select-Subscription {
     Param(
-        [String]$inputSubscription
+        [String]$AzureSubscriptionId
     )
 
     Write-Host
     Write-Host -ForegroundColor DarkMagenta "################################################################"
     Write-Host -ForegroundColor DarkMagenta "###"
-    Write-Host -ForegroundColor DarkMagenta "###                    Subscription Creation"
+    Write-Host -ForegroundColor DarkMagenta "###                    Subscription Selection"
     Write-Host -ForegroundColor DarkMagenta "###"
     Write-Host -ForegroundColor DarkMagenta "################################################################"
     Write-Host
 
-    if ([string]::IsNullOrEmpty($inputSubscription)) {
+    if ([string]::IsNullOrEmpty($AzureSubscriptionId)) {
         $subscriptions = (az account list | ConvertFrom-Json)
-        $subscriptionName = ''
-        $subscriptionId = 0
+        $subscriptionName = ''        
         $idx = -1
         if ($subscriptions.Length -eq 1) {
             $subscriptionName = $subscriptions.name
-            $subscriptionId = $subscriptions.id
+            $AzureSubscriptionId = $subscriptions.id
         }
         else {
             Write-Host "Getting available subscriptions" -ForegroundColor Green
@@ -36,16 +34,16 @@ function Select-Subscription {
             } While ((-not $idx) -or (0 -gt $idx) -or ($subscriptions.Count -lt $idx))
 
             $subscriptionName = $subscriptions[$idx - 1].name
-            $subscriptionId = $subscriptions[$idx - 1].id
-
-            Write-Host ("You're about to use subscription {0}" -f $subscriptionName) -ForegroundColor Green
+            $AzureSubscriptionId = $subscriptions[$idx - 1].id
         }
+        Write-Host ("You're about to use subscription {0}" -f $subscriptionName) -ForegroundColor Green
     }
-    else {       
-        $subscriptionId = $inputSubscription
-        Write-Host ("You're about to use subscription {0}" -f $subscriptionId) -ForegroundColor Green
+    else { 
+        Write-Host ("You're about to use subscription {0}" -f $AzureSubscriptionId) -ForegroundColor Green
     }
 
-    az account set --subscription $subscriptionId
+    az account set --subscription $AzureSubscriptionId
     Write-Host
+
+    return $AzureSubscriptionId
 }

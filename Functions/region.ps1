@@ -1,6 +1,6 @@
-function Select-Region {
-    Param(
-        [String]$inputRegion
+function Select-Azure-Region {
+    Param(        
+        [String]$AzureRegion
     )
 
     Write-Host
@@ -11,7 +11,7 @@ function Select-Region {
     Write-Host -ForegroundColor DarkMagenta "################################################################"
     Write-Host
     
-    if ([string]::IsNullOrEmpty($inputRegion)) {
+    if ([string]::IsNullOrEmpty($AzureRegion)) {
         Write-Host "Getting available regions" -ForegroundColor Green
         $regions = (az account list-locations --query '[].{DisplayName:displayName,Name:name}' | ConvertFrom-Json)
 
@@ -29,8 +29,6 @@ function Select-Region {
         } While ((-not $idx) -or (0 -gt $idx) -or ($regions.Count -lt $idx))
 
         $AzureRegion = $regions[$idx - 1].Name
-    } else {
-        $AzureRegion = $inputRegion
     }
 
     Write-Host ("You're about to use region {0}" -f $AzureRegion) -ForegroundColor Green

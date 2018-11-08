@@ -1,6 +1,7 @@
 function Add-Keyvault {
     Param(
-        [String]$inputKeyvaultName
+        [Parameter(Mandatory = $true, HelpMessage = "Please provide a Keyvault name.")]
+        [String]$KeyvaultName
     )
 
     Write-Host
@@ -10,33 +11,34 @@ function Add-Keyvault {
     Write-Host -ForegroundColor DarkMagenta "###"
     Write-Host -ForegroundColor DarkMagenta "################################################################"
     Write-Host
+   
 
-    if ([string]::IsNullOrEmpty($inputKeyvaultName)) {
-        Do {
-            $keyvaultName = Read-Host "Please provide a keyvault name"
-        } While ([string]::IsNullOrEmpty($keyvaultName))
-    }
-    else {
-        $keyvaultName = $inputKeyvaultName
-    }
-
-    $keyvaultDetail = (az keyvault list --resource-group $Script:Resourcegroup | ConvertFrom-Json) | where {$_.name -eq $keyvaultName}
+    $keyvaultDetail = (az keyvault list --resource-group $global:Resourcegroup | ConvertFrom-Json) | Where-Object {$_.name -eq $keyvaultName}
 
     if ([string]::IsNullOrEmpty($keyvaultDetail)) {
-        Write-Host -ForegroundColor Green ("Creating Keyvault {0}" -f $keyvaultName)
-        az keyvault create --name $keyvaultName --resource-group $Script:Resourcegroup --location $Script:AzureRegion
+        Write-Host -ForegroundColor Green ("Creating Keyvault {0}" -f $KeyvaultName)
+
+        $Params = "-n", $KeyvaultName,
+        "-g", $global:Resourcegroup,
+        "--location", $global:AzureRegion
+
+        (az keyvault create `
+                $Params `
+                | ConvertFrom-Json)
     }
     else {
-        Write-Host -ForegroundColor Green ("Keyvault {0} already exists" -f $keyvaultName)
+        Write-Host -ForegroundColor Green ("Keyvault {0} already exists" -f $KeyvaultName)
     }
 
-    return $keyvaultName
+    return $KeyvaultName
 }
 
 function Add-Keyvault-Secret {
     Param(        
-        [String]$inputSecretName,
-        [String]$inputSecretValue
+        [Parameter(Mandatory = $true, HelpMessage = "Please provide a Secret name.")]
+        [String]$SecretName,
+        [Parameter(Mandatory = $true, HelpMessage = "Please provide a Secret name.")]
+        [String]$SecretValue
     )
 
     Write-Host
@@ -47,55 +49,35 @@ function Add-Keyvault-Secret {
     Write-Host -ForegroundColor DarkMagenta "################################################################"
     Write-Host
 
-    if ([string]::IsNullOrEmpty($Script:KeyvaultName)) {
+    if ([string]::IsNullOrEmpty($global:KeyvaultName)) {
         Do {
-            $keyvaultName = Read-Host "Please provide a keyvault name"
-        } While ([string]::IsNullOrEmpty($keyvaultName))
+            $global:KeyvaultName = Read-Host "Please provide a keyvault name"
+        } While ([string]::IsNullOrEmpty($global:KeyvaultName))
+    }
 
-        if (![string]::IsNullOrEmpty($Script:ResourcePrefix)) {
-            $keyvaultName = ("{0}-{1}" -f $Script:ResourcePrefix, $keyvaultName) 
-        }
+    $Params = "--name", $SecretName, 
+    "--vault-name", $global:KeyvaultName
 
-        $Script:KeyvaultName = $keyvaultName
+    $SecretDetail = az keyvault secret show $Params
+
+    if ([string]::IsNullOrEmpty($SecretDetail)) {
+        Write-Host -ForegroundColor Green ("Creating Keyvault Secret {0}" -f $SecretName)
+
+        $Params += "--value", $SecretValue
+
+        (az keyvault secret set `
+                $Params `
+                | ConvertFrom-Json) | Out-Null
     }
     else {
-        $keyvaultName = $Script:KeyvaultName
-    }
-
-    if ([string]::IsNullOrEmpty($inputSecretName)) {
-        Do {
-            $secretName = Read-Host "Please provide a secret name"
-        } While ([string]::IsNullOrEmpty($secretName))
-    }
-    else {
-        $secretName = $inputSecretName
-    }
-
-    if ([string]::IsNullOrEmpty($inputSecretValue)) {
-        Do {
-            $secretValue = Read-Host "Please provide a secret value"
-        } While ([string]::IsNullOrEmpty($secretValue))
-    }
-    else {
-        $secretValue = $inputSecretValue
-    }
-
-    $secret = az keyvault secret show --name $secretName --vault-name $Script:KeyvaultName
-
-    if ([string]::IsNullOrEmpty($secret)) {
-        Write-Host -ForegroundColor Green ("Creating Keyvault Secret {0}" -f $secretName)
-        az keyvault secret set --vault-name $Script:KeyvaultName `
-            --name $secretName `
-            --value $secretValue
-    }
-    else {
-        Write-Host -ForegroundColor Green ("Keyvault Secret {0} already exists" -f $secretName)
+        Write-Host -ForegroundColor Green ("Keyvault Secret {0} already exists" -f $SecretName)
     }
 }
 
 function Add-Keyvault-Get-List-Policies {
     Param(
-        [String]$inputPrincipalId
+        [Parameter(Mandatory = $true, HelpMessage = "Please provide a Principal Id to associate with the policy.")]
+        [String]$PrincipalId
     )
 
     Write-Host
@@ -106,31 +88,16 @@ function Add-Keyvault-Get-List-Policies {
     Write-Host -ForegroundColor DarkMagenta "################################################################"
     Write-Host
 
-    if ([string]::IsNullOrEmpty($Script:KeyvaultName)) {
+    if ([string]::IsNullOrEmpty($global:KeyvaultName)) {
         Do {
-            $keyvaultName = Read-Host "Please provide a keyvault name"
-        } While ([string]::IsNullOrEmpty($keyvaultName))
-
-        if (![string]::IsNullOrEmpty($Script:ResourcePrefix)) {
-            $keyvaultName = ("{0}-{1}" -f $Script:ResourcePrefix, $keyvaultName) 
-        }
-
-        $Script:KeyvaultName = $keyvaultName
-    }
-    else {
-        $keyvaultName = $Script:KeyvaultName
+            $global:KeyvaultName = Read-Host "Please provide a keyvault name"
+        } While ([string]::IsNullOrEmpty($global:KeyvaultName))
     }
 
-    if ([string]::IsNullOrEmpty($inputPrincipalId)) {
-        Do {
-            $principalId = Read-Host "Please provide a principal Id"
-        } While ([string]::IsNullOrEmpty($secretName))
-    }
-    else {
-        $principalId = $inputPrincipalId
-    }
+    $Params = "-n", $global:KeyvaultName,
+    "-g", $global:Resourcegroup,
+    "--secret-permissions", "get", "list",
+    "--object-id", $PrincipalId
 
-    az keyvault set-policy -n $Script:KeyvaultName -g $Script:Resourcegroup --secret-permissions get list --object-id $principalId
-
-
+    (az keyvault set-policy $Params | ConvertFrom-Json) | Out-Null
 }

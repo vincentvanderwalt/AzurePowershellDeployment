@@ -1,6 +1,7 @@
 function Add-AppServicePlan {
     Param(
-        [String]$inputPlanName
+        [Parameter(Mandatory = $true, HelpMessage = "Please provide a App Service Plan name.")]
+        [String]$AppServicePlanName
     )
 
     Write-Host
@@ -11,30 +12,21 @@ function Add-AppServicePlan {
     Write-Host -ForegroundColor DarkMagenta "################################################################"
     Write-Host
 
-    if ([string]::IsNullOrEmpty($inputPlanName)) {
-        Do {
-            $planName = Read-Host "Please provide a appservice plan name"
-        } While ([string]::IsNullOrEmpty($planName))
-    }
-    else {
-        $planName = $inputPlanName
-    }
-
-    if (![string]::IsNullOrEmpty($Script:ResourcePrefix)) {
-        $planName = ("{0}-{1}" -f $Script:ResourcePrefix, $planName) 
-    }
-
-    $appServicePlanDetail = (az appservice plan list --resource-group $Script:Resourcegroup | ConvertFrom-Json) | where {$_.name -eq $planName}
+    $appServicePlanDetail = (az appservice plan list --resource-group $global:Resourcegroup | ConvertFrom-Json) | Where-Object {$_.name -eq $AppServicePlanName}
 
     if ([string]::IsNullOrEmpty($appServicePlanDetail)) {
-        Write-Host -ForegroundColor Green ("Creating AppService Plan {0}" -f $planName)
-        az appservice plan create `
-        --name $planName `
-        --resource-group $Script:Resourcegroup `
-        --location $Script:AzureRegion `
-        --sku "S1"
+        Write-Host -ForegroundColor Green ("Creating AppService Plan {0}" -f $AppServicePlanName)
+
+        $Params = "--resource-group", $global:Resourcegroup,
+        "--name", $AppServicePlanName,
+        "--location", $global:AzureRegion,
+        "--sku", "S1"
+
+        (az appservice plan create `
+                $Params `
+                | ConvertFrom-Json)
     }
     else {
-        Write-Host -ForegroundColor Green ("Appservice Plan {0} already exists" -f $planName)
+        Write-Host -ForegroundColor Green ("Appservice Plan {0} already exists" -f $AppServicePlanName)
     }
 }

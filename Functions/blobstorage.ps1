@@ -1,9 +1,10 @@
 
 function Add-StorageAccount {
     Param(
-        [String]$inputName,
-        [String]$inputSku,
-        [String]$inputKind
+        [Parameter(Mandatory = $true, HelpMessage = "Please provide a Storage Account name.")]
+        [String]$StorageAccountName,       
+        [String]$StorageAccountSku,
+        [String]$StorageAccountKind
     )
 
     Write-Host
@@ -13,21 +14,12 @@ function Add-StorageAccount {
     Write-Host -ForegroundColor DarkMagenta "###"
     Write-Host -ForegroundColor DarkMagenta "################################################################"
     Write-Host
+    
 
-    Write-Host
-    if ([string]::IsNullOrEmpty($inputName)) {
-        Do {
-            $Name = Read-Host "Please provide a Storage Account name"
-        } While ([string]::IsNullOrEmpty($Name))
-    }
-    else {
-        $Name = $inputName
-    }
-
-    $Name = $Name -replace '[^a-zA-Z0-9]', ''
-    $Name = $Name.ToLowerInvariant()
-    if ($Name.Length -gt 24) {
-        $Name = $Name.Substring(0, 24)
+    $StorageAccountName = $StorageAccountName -replace '[^a-zA-Z0-9]', ''
+    $StorageAccountName = $StorageAccountName.ToLowerInvariant()
+    if ($StorageAccountName.Length -gt 24) {
+        $StorageAccountName = $StorageAccountName.Substring(0, 24)
     }
     
     $SkuNames = @(
@@ -38,10 +30,11 @@ function Add-StorageAccount {
         [pscustomobject]@{id = "Premium_LRS"; description = "Premium locally-redundant"}
     )
 
-    if ([string]::IsNullOrEmpty($inputSku)) {
+    if ([string]::IsNullOrEmpty($StorageAccountSku) -or !($SkuNames.id -contains $StorageAccountSku)) {
         $idx = -1
         Do {
 
+            Write-Host "Please select a Sku for the storage account"
             Write-Host
             for ($i = 0; $i -lt $SkuNames.count; $i++) {
                 Write-Host -ForegroundColor Cyan "  $($i+1)." $SkuNames[$i].description
@@ -52,10 +45,7 @@ function Add-StorageAccount {
 
         } While ((-not $idx) -or (0 -gt $idx))
 
-        $Sku = $SkuNames[$idx - 1].id
-    }
-    else {
-        $Sku = $inputSku
+        $StorageAccountSku = $SkuNames[$idx - 1].id
     }
 
     $KindNames = @(
@@ -64,10 +54,11 @@ function Add-StorageAccount {
         [pscustomobject]@{id = "BlobStorage"; description = "Blob Storage account"}
     )
 
-    if ([string]::IsNullOrEmpty($inputKind)) {
+    if ([string]::IsNullOrEmpty($StorageAccountKind) -or !($KindNames.id -contains $StorageAccountKind)) {
         $idx = -1
         Do {
 
+            Write-Host "Please select a Kind for the storage account"
             Write-Host
             for ($i = 0; $i -lt $KindNames.count; $i++) {
                 Write-Host -ForegroundColor Cyan "  $($i+1)." $KindNames[$i].description
@@ -78,75 +69,75 @@ function Add-StorageAccount {
 
         } While ((-not $idx) -or (0 -gt $idx))
 
-        $Kind = $KindNames[$idx - 1].id
+        $StorageAccountKind = $KindNames[$idx - 1].id
     }
-    else {
-        $Kind = $inputKind
-    }
+   
 
-    $accountDetail = (az storage account list --resource-group $Script:Resourcegroup | ConvertFrom-Json) | where {$_.name -eq $Name}
+    $accountDetail = (az storage account list --resource-group $global:Resourcegroup | ConvertFrom-Json) | Where-Object {$_.name -eq $StorageAccountName}
 
     if (([string]::IsNullOrEmpty($accountDetail.name))) {
-        Write-Host -ForegroundColor Green ("Creating Storage Account {0}" -f $Name)
+        Write-Host -ForegroundColor Green ("Creating Storage Account {0}" -f $StorageAccountName)
 
-        az storage account create --resource-group $Script:Resourcegroup `
-        --name $Name `
-        --location  $Script:AzureRegion `
-        --sku $Sku `
-        --kind $Kind
+        $Params = "--resource-group", $global:Resourcegroup,
+        "--name", $StorageAccountName,
+        "--location", $global:AzureRegion,
+        "--sku", $StorageAccountSku,
+        "--kind", $StorageAccountKind
+
+        (az storage account create `
+                $Params `
+                | ConvertFrom-Json) | Out-Null
     }
     else {
-        Write-Host -ForegroundColor Green ("Storage Account {0} already exists" -f $Name)
+        Write-Host -ForegroundColor Green ("Storage Account {0} already exists" -f $StorageAccountName)
     }
 
-    return $Name
+    return $StorageAccountName
 }
 
-function Get-StorageKey {
+function Get-StorageAccountKey {
     Param(
-        [String]$inputStorageAccount
+        [Parameter(Mandatory = $true, HelpMessage = "Please provide a Storage Account name.")]
+        [String]$StorageAccountName
     )
 
-    if ([string]::IsNullOrEmpty($inputStorageAccount)) {
-        Do {
-            $storageAccount = Read-Host "Please provide a Storage Account name"
-        } While ([string]::IsNullOrEmpty($storageAccount))
-    }
-    else {
-        $storageAccount = $inputStorageAccount
-    }
+    $Params = "--resource-group", $global:Resourcegroup,
+    "--account-name", $StorageAccountName
 
-    $Key1 = (az storage account keys list --account-name $storageAccount --resource-group $Script:Resourcegroup| ConvertFrom-Json) | where {$_.keyName -eq "key1"}
+    $Key1 = (az storage account keys list $Params  | ConvertFrom-Json) | Where-Object {$_.keyName -eq "key1"}
 
     return $Key1.value
-
 }
 
 function Get-StorageConnectionString {
     Param(
-        [String]$inputStorageAccount
+        [Parameter(Mandatory = $true, HelpMessage = "Please provide a Storage Account name.")]
+        [String]$StorageAccountName
     )
 
-    if ([string]::IsNullOrEmpty($inputStorageAccount)) {
-        Do {
-            $storageAccount = Read-Host "Please provide a Storage Account name"
-        } While ([string]::IsNullOrEmpty($storageAccount))
-    }
-    else {
-        $storageAccount = $inputStorageAccount
-    }
+    Write-Host
+    Write-Host -ForegroundColor DarkMagenta "################################################################"
+    Write-Host -ForegroundColor DarkMagenta "###"
+    Write-Host -ForegroundColor DarkMagenta "###                   Get Storage Connectionstring"
+    Write-Host -ForegroundColor DarkMagenta "###"
+    Write-Host -ForegroundColor DarkMagenta "################################################################"
+    Write-Host
+    
+    $Params = "--name", $StorageAccountName,
+    "--key", "primary"
 
     $result = (az storage account show-connection-string `
-    --name $storageAccount `
-    --key primary `
-    | ConvertFrom-Json)
+            $Params `
+            | ConvertFrom-Json)
 
     return $result.connectionString
 }
 function Add-StorageContainer {
     Param(
-        [String]$inputStorageAccount,
-        [String]$inputName        
+        [Parameter(Mandatory = $true, HelpMessage = "Please provide a Storage Account name.")]
+        [String]$StorageAccountName,
+        [Parameter(Mandatory = $true, HelpMessage = "Please provide a Storage Container name.")]
+        [String]$StorageContainerName
     )
 
     Write-Host
@@ -156,40 +147,26 @@ function Add-StorageContainer {
     Write-Host -ForegroundColor DarkMagenta "###"
     Write-Host -ForegroundColor DarkMagenta "################################################################"
     Write-Host
+   
 
-    if ([string]::IsNullOrEmpty($inputStorageAccount)) {
-        Do {
-            $storageAccount = Read-Host "Please provide a Storage Account name"
-        } While ([string]::IsNullOrEmpty($storageAccount))
-    }
-    else {
-        $storageAccount = $inputStorageAccount
-    }
+    $key = Get-StorageAccountKey $StorageAccountName
 
-    if ([string]::IsNullOrEmpty($inputName)) {
-        Do {
-            $containerName = Read-Host "Please provide a Container name"
-        } While ([string]::IsNullOrEmpty($containerName))
-    }
-    else {
-        $containerName = $inputName
-    }
-
-    $key = Get-StorageKey $storageAccount
+    $Params = "--name", $StorageContainerName,
+    "--account-name", $StorageAccountName,
+    "--account-key", $key
     
-    $containerExists = (az storage container exists --name $containerName `
-    --account-name $storageAccount `
-    --account-key $key `
-    | ConvertFrom-Json)
+    $containerExists = (az storage container exists  `
+            $Params `
+            | ConvertFrom-Json)
         
     if (!$containerExists.exists) {
-        Write-Host -ForegroundColor Green ("Creating Storage Container {0}" -f $containerName)
+        Write-Host -ForegroundColor Green ("Creating Storage Container {0}" -f $StorageContainerName)
 
-        az storage container create --name $containerName `
-        --account-name $storageAccount `
-        --account-key $key
+        (az storage container create `
+                $Params `
+                | ConvertFrom-Json) | Out-Null
     }
     else {
-        Write-Host -ForegroundColor Green ("Storage Container {0} already exists" -f $containerName)
+        Write-Host -ForegroundColor Green ("Storage Container {0} already exists" -f $StorageContainerName)
     }
 }

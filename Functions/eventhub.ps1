@@ -1,6 +1,7 @@
 function Add-EventHub-Namespace {
     Param(
-        [String]$inputEventHubNamespace
+        [Parameter(Mandatory = $true, HelpMessage = "Please provide a Eventhub namespace.")]
+        [String]$EventhubNamespace
     )
 
     Write-Host
@@ -9,32 +10,21 @@ function Add-EventHub-Namespace {
     Write-Host -ForegroundColor DarkMagenta "###                     EventHub Namespace Creation"
     Write-Host -ForegroundColor DarkMagenta "###"
     Write-Host -ForegroundColor DarkMagenta "################################################################"
-    Write-Host
+    Write-Host    
 
-    if ([string]::IsNullOrEmpty($inputEventHubNamespace)) {
-        Do {
-            $eventhubNamespace = Read-Host "Please provide a eventhub namespace"
-        } While ([string]::IsNullOrEmpty($eventhubNamespace))
-    }
-    else {
-        $eventhubNamespace = $inputEventHubNamespace
-    }
-
-    $eventhubNamespace = $eventhubNamespace.ToLowerInvariant()
-
-    if (![string]::IsNullOrEmpty($Script:ResourcePrefix)) {
-        $eventhubNamespace = ("{0}-{1}" -f $Script:ResourcePrefix, $eventhubNamespace) 
-    }
-
-    $eventhubNamespaceDetail = (az eventhubs namespace list --resource-group $Script:Resourcegroup | ConvertFrom-Json) | where {$_.name -eq $eventhubNamespace}
+    $eventhubNamespaceDetail = (az eventhubs namespace list --resource-group $global:Resourcegroup | ConvertFrom-Json) | Where-Object {$_.name -eq $eventhubNamespace}
 
     if ([string]::IsNullOrEmpty($eventhubNamespaceDetail)) {
         Write-Host -ForegroundColor Green ("Creating eventhub namespace {0}" -f $eventhubNamespace)
-        az eventhubs namespace create `
-            --name $eventhubNamespace `
-            --resource-group $Script:Resourcegroup `
-            --location $Script:AzureRegion `
-            --sku "Standard"
+
+        $Params = "--name", $eventhubNamespace,
+        "--resource-group", $global:Resourcegroup,
+        "--location", $global:AzureRegion,
+        "--sku", "Standard"
+
+        (az eventhubs namespace create `
+                $Params `
+                | ConvertFrom-Json) | Out-Null
     }
     else {
         Write-Host -ForegroundColor Green ("Eventhub namespace {0} already exists" -f $eventhubNamespace)
@@ -42,13 +32,61 @@ function Add-EventHub-Namespace {
 
 }
 
-function Add-EventHub {
+function Add-Eventhub-Consumergroup {
     Param(
-        [String]$inputEventHubNamespace,
-        [String]$inputEventHubName,
-        [String]$inputEnableCapture,
-        [String]$inputCaptureStorageAccount,
-        [String]$inputCaptureStorageContainer
+        [Parameter(Mandatory = $true, HelpMessage = "Please provide a Eventhub namespace.")]
+        [String]$EventhubNamespace,
+        [Parameter(Mandatory = $true, HelpMessage = "Please provide a Eventhub name.")]
+        [String]$EventhubName,
+        [Parameter(Mandatory = $true, HelpMessage = "Please provide a Eventhub Consumergroup name.")]
+        [String]$EventhubConsumerGroup
+    )
+
+    Write-Host
+    Write-Host -ForegroundColor DarkMagenta "################################################################"
+    Write-Host -ForegroundColor DarkMagenta "###"
+    Write-Host -ForegroundColor DarkMagenta "###                     EventHub Consumergroup Creation"
+    Write-Host -ForegroundColor DarkMagenta "###"
+    Write-Host -ForegroundColor DarkMagenta "################################################################"
+    Write-Host
+
+    $ReadParams = "--resource-group", $global:Resourcegroup,
+    "--namespace-name", $EventhubNamespace,
+    "--eventhub-name", $EventhubName
+
+    $consumergroupDetail = (az eventhubs eventhub consumer-group list $ReadParams  | ConvertFrom-Json) | Where-Object {$_.name -eq $EventhubConsumerGroup}
+
+    if (([string]::IsNullOrEmpty($consumergroupDetail))) {
+        Write-Host -ForegroundColor Green ("Creating Eventhub Consumergroup {0}" -f $EventhubConsumerGroup)
+
+        $Params = "--namespace-name", $EventhubNamespace,
+        "--eventhub-name", $EventhubName,   
+        "--name", $EventhubConsumerGroup,      
+        "--resource-group", $global:Resourcegroup
+
+        (az eventhubs eventhub consumer-group create `
+                $Params `
+                | ConvertFrom-Json) | Out-Null
+    }
+    else {
+        Write-Host -ForegroundColor Green ("Eventhub Consumergroup {0} already exists" -f $EventhubConsumerGroup)
+    }
+
+}
+
+function Add-EventHub {
+    [CmdletBinding(DefaultParameterSetName='EventHub')]
+    Param(
+        [Parameter(Mandatory = $true, HelpMessage = "Please provide a Eventhub namespace.")]
+        [String]$EventhubNamespace,
+        [Parameter(Mandatory = $true, HelpMessage = "Please provide a Eventhub name.")]
+        [String]$EventhubName,
+        [Parameter(Mandatory = $false, HelpMessage = "Enable/Disable Eventhub Capture.", ParameterSetName = "Capture")]
+        [switch]$EnableCapture,
+        [Parameter(Mandatory = $true, HelpMessage = "Please provide a Storage Account name.", ParameterSetName = "Capture")]
+        [String]$CaptureStorageAccountName,
+        [Parameter(Mandatory = $true, HelpMessage = "Please provide a Storage Container name.", ParameterSetName = "Capture")]
+        [String]$CaptureStorageContainerName
     )
 
     Write-Host
@@ -59,106 +97,53 @@ function Add-EventHub {
     Write-Host -ForegroundColor DarkMagenta "################################################################"
     Write-Host
 
-    if ([string]::IsNullOrEmpty($inputEventHubNamespace)) {
-        Do {
-            $eventhubNamespace = Read-Host "Please provide a eventhub namespace"
-        } While ([string]::IsNullOrEmpty($eventhubNamespace))
-    }
-    else {
-        $eventhubNamespace = $inputEventHubNamespace
-    }
+    $ReadParams = "--resource-group", $global:Resourcegroup,
+    "--namespace-name", $EventhubNamespace
 
-    if ([string]::IsNullOrEmpty($inputEventHubName)) {
-        Do {
-            $eventhubName = Read-Host "Please provide a eventhub name"
-        } While ([string]::IsNullOrEmpty($eventhubName))
-    }
-    else {
-        $eventhubName = $inputEventHubName
-    }
-
-    $captureEnabled = $false
-    if (![string]::IsNullOrEmpty($inputEnableCapture) -and [System.Convert]::ToBoolean($inputEnableCapture)) {
-        $captureEnabled = $true
-        if ([string]::IsNullOrEmpty($inputCaptureStorageAccount)) {
-            Do {
-                $captureStorageAccount = Read-Host "Please provide a storage account name for the capture"
-            } While ([string]::IsNullOrEmpty($captureStorageAccount))
-        }
-        else {
-            $captureStorageAccount = $inputCaptureStorageAccount
-        }
-
-        if ([string]::IsNullOrEmpty($inputCaptureStorageContainer)) {
-            Do {
-                $captureStorageContainer = Read-Host "Please provide a storage container for the capture"
-            } While ([string]::IsNullOrEmpty($captureStorageContainer))
-        }
-        else {
-            $captureStorageContainer = $inputCaptureStorageContainer
-        }
-    } 
-
-    $eventhubDetail = (az eventhubs eventhub list --resource-group $Script:Resourcegroup --namespace-name $eventhubNamespace | ConvertFrom-Json) | where {$_.name -eq $eventhubName}
+    $eventhubDetail = (az eventhubs eventhub list $ReadParams  | ConvertFrom-Json) | Where-Object {$_.name -eq $eventhubName}
 
     if (([string]::IsNullOrEmpty($eventhubDetail.name))) {
-        Write-Host -ForegroundColor Green ("Creating Eventhub {0}" -f $eventhubName)
+        Write-Host -ForegroundColor Green ("Creating Eventhub {0}" -f $EventhubName)
 
-        if ($captureEnabled) {
-            az eventhubs eventhub create `
-                --namespace-name $eventhubNamespace `
-                --name $eventhubName `
-                --enable-capture true `
-                --resource-group $Script:Resourcegroup `
-                --storage-account $captureStorageAccount `
-                --blob-container $captureStorageContainer `
-                --partition-count 2 `
-                --capture-interval 60 `
-                --capture-size-limit 30000000 `
-                --destination-name "EventHubArchive.AzureBlockBlob"
+        $Params = "--namespace-name", $EventhubNamespace,
+        "--name", $EventhubName,        
+        "--resource-group", $global:Resourcegroup
+
+        if ($EnableCapture) {
+            $Params += "--enable-capture", "true",
+            "--storage-account", $CaptureStorageAccountName,
+            "--blob-container", $CaptureStorageContainerName,
+            "--partition-count", 2,
+            "--capture-interval", 60,
+            "--capture-size-limit", 30000000,
+            "--destination-name", "EventHubArchive.AzureBlockBlob"
         }
         else {
-            az eventhubs eventhub create `
-                --namespace-name $eventhubNamespace `
-                --name $eventhubName `
-                --enable-capture false `
-                --resource-group $Script:Resourcegroup
+            $Params += "--enable-capture", "false"
         }
+
+        (az eventhubs eventhub create `
+                $Params `
+                | ConvertFrom-Json) | Out-Null
     }
     else {
         Write-Host -ForegroundColor Green ("Eventhub {0} already exists" -f $eventhubName)
     }
 }
-
-
 function Get-EventHub-ConnectionString {
     Param(
-        [String]$inputEventHubNamespace,
-        [String]$inputEventHubName
+        [Parameter(Mandatory = $true, HelpMessage = "Please provide a Eventhub namespace.")]
+        [String]$EventhubNamespace,
+        [Parameter(Mandatory = $true, HelpMessage = "Please provide a Eventhub name.")]
+        [String]$EventhubName
     )
 
-    if ([string]::IsNullOrEmpty($inputEventHubNamespace)) {
-        Do {
-            $eventhubNamespace = Read-Host "Please provide a eventhub namespace"
-        } While ([string]::IsNullOrEmpty($eventhubNamespace))
-    }
-    else {
-        $eventhubNamespace = $inputEventHubNamespace
-    }
-
-    if ([string]::IsNullOrEmpty($inputEventHubName)) {
-        Do {
-            $eventhubName = Read-Host "Please provide a eventhub name"
-        } While ([string]::IsNullOrEmpty($eventhubName))
-    }
-    else {
-        $eventhubName = $inputEventHubName
-    }
+    $Params = "-g", $global:Resourcegroup,
+    "--namespace-name", $eventhubNamespace,
+    "-n", "RootManageSharedAccessKey"
 
     $eventHubDetail = (az eventhubs namespace authorization-rule keys list `
-            -g $Script:Resourcegroup `
-            --namespace-name $eventhubNamespace `
-            -n "RootManageSharedAccessKey" `
+            $Params `
             | ConvertFrom-Json)
 
     if (![string]::IsNullOrEmpty($eventHubDetail)) {        
