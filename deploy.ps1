@@ -13,7 +13,7 @@
 
 Login
 
-Select-Subscription "360024f5-4ea8-4e01-818b-74246c32090a"
+Select-Subscription "your-subscription-id"
 
 # Select-Prefix "MyPlant"
 
